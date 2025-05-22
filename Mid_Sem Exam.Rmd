@@ -1,0 +1,595 @@
+---
+title: "101220_Rubangisa"
+author: "Wayne Rubangisa"
+date: "2025-05-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# LIFE EXPECTANCY ANALYSIS
+
+## Download and load data to R Studio
+
+### Country Population
+
+```{r}
+country_population <- read.csv("country_population.csv")
+head(country_population)
+```
+### Fertility Rate
+
+```{r}
+fertility_rate <- read.csv("fertility_rate.csv")
+head(fertility_rate)
+```
+
+### Life Expectancy
+
+```{r}
+life_expectancy <- read.csv("life_expectancy.csv")
+head(life_expectancy)
+```
+
+### Life Expectancy Data
+
+```{r}
+life_expectancy_data <- read.csv("Life Expectancy Data.csv")
+head(life_expectancy_data)
+```
+
+## Exploratory Data Analysis
+
+### Display Variable Names
+
+See the names of all variables in the data set `Life Expectancy Data`
+
+```{r}
+names(life_expectancy_data)
+```
+
+
+```{r}
+cat(names(life_expectancy_data), sep = "\n")
+```
+
+### Display the first 5 rows
+
+Preview the first 5 observations in the data set. 
+
+```{r}
+head(life_expectancy_data, 5)
+```
+
+### Display the bottom 10 rows
+
+View the last 10 observations of the data set.
+
+```{r}
+tail(life_expectancy_data, 10)
+```
+### Display the data types
+
+Shows what type of data each column holds.
+
+```{r}
+sapply(life_expectancy_data, class)
+```
+
+We need a cleaner way to present this though. 
+
+```{r}
+result <- sapply(life_expectancy_data, class)
+result
+```
+
+```{r}
+result <- sapply(life_expectancy_data, class)
+data.frame(Column = names(result), Class = result)
+```
+Let's see if we can remove the extra (the first column). 
+
+```{r}
+result <- cat(sapply(life_expectancy_data, class), sep = "\n")
+result
+```
+
+
+```{r}
+names(result)
+```
+We still need the names though. So we need to find a way to get the names and values. 
+
+```{r}
+result
+```
+
+```{r}
+result[]
+```
+```{r}
+class(result)
+```
+```{r}
+unname(result)
+```
+```{r}
+data.frame(Column = names(result), Class = unname(result))
+
+```
+
+```{r}
+sapply(life_expectancy_data, class)
+```
+It checks out. We can move to the next tasks. 
+
+### Shape of the dataset.
+
+```{r}
+dim(life_expectancy_data)
+```
+
+```{r}
+cat("Rows:", dim(life_expectancy_data)[1], "\n")
+cat("Columns:", dim(life_expectancy_data)[2])
+```
+Another way: 
+
+```{r}
+rows <- nrow(life_expectancy_data)
+cols <- ncol(life_expectancy_data)
+cat("Rows:", rows, "\n")
+cat("Columns:", cols)
+```
+### Drop Duplicate Rows
+
+First of all, let's see how many duplicated observations we have in our dataset. 
+
+`duplicated(life_expectancy_data)` returns a logical vector. Instead of printing the vector, we want to know how many trues we have in said vector. 
+
+```{r}
+sum(duplicated(life_expectancy_data))
+```
+Well, it looks like we don't need to drop duplicates, since there aren't any. In which case, we move on to the next task. 
+
+### Number of missing values in each column
+
+```{r}
+colSums(is.na(life_expectancy_data))
+```
+
+Now, let's make our output presentable. 
+
+```{r}
+data.frame(Columns = names(colSums(is.na(life_expectancy_data))), class = unname(colSums(is.na(life_expectancy_data)))) 
+```
+
+```{r}
+library(dplyr)
+data.frame(Columns = names(colSums(is.na(life_expectancy_data))), class = unname(colSums(is.na(life_expectancy_data)))) %>%
+  arrange(desc(class))
+```
+
+### Use boxplots to check for outliers in quantitative variables. 
+
+```{r}
+numeric_vars <- sapply(life_expectancy_data, is.numeric)
+boxplot(life_expectancy_data[, numeric_vars], main = "Boxplots for Numeric Variables", las = 2)
+```
+
+The boxplots are a bit small though. Let's try to make them bigger. 
+
+```{r}
+boxplot(life_expectancy_data[, numeric_vars], main = "Boxplots for Numeric Variables", las = 2, boxwex = 2.5)
+```
+
+`boxwex` didn't work. Let's try another one. 
+
+```{r}
+library(reshape2)
+long_data <- melt(life_expectancy_data[, numeric_vars])
+
+library(ggplot2)
+ggplot(long_data, aes(x = variable, y = value)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  ggtitle("Boxplots for Numeric Variables")
+
+```
+
+
+
+```{r}
+# Create a ggplot boxplot with more control over size
+ggplot(long_data, aes(x = variable, y = value)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),  # Rotate labels
+        plot.margin = margin(10, 10, 10, 10),  # Adjust plot margins
+        axis.text = element_text(size = 12),  # Change axis text size
+        axis.title = element_text(size = 14)) +  # Change title size
+  ggtitle("Boxplots for Numeric Variables")
+```
+
+### Handle missing values and outliers. 
+
+Which columns are continuous so that we can fill na with the media (since we have established that we have outliers).
+
+```{r}
+continuous_cols <- colnames(life_expectancy_data)[sapply(life_expectancy_data, is.numeric)]
+continuous_cols
+```
+
+Now, we replace the NA values in each of the these columns by the median. Now, let's handle some missing values. 
+
+```{r}
+for (col in continuous_cols) {
+  life_expectancy_data[[col]] <- ifelse(
+    is.na(life_expectancy_data[[col]]), 
+    median(life_expectancy_data[[col]], na.rm = TRUE), life_expectancy_data[[col]])
+}
+```
+
+Now, let's see if we have any missing values. 
+
+```{r}
+library(dplyr)
+data.frame(Columns = names(colSums(is.na(life_expectancy_data))), class = unname(colSums(is.na(life_expectancy_data)))) %>%
+  arrange(desc(class))
+```
+Wonderful. Now, let's handle some outliers. This is fun. 🤩
+
+We are going to use the Interquartile Range (IQR) method to identify and cap or remove outliers. 
+
+```{r}
+cap_outliers <- function(x) {
+  q1 <- quantile(x, 0.25)
+  q3 <- quantile(x, 0.75)
+  iqr <- q3 - q1
+  lower <- q1 - 1.5 * iqr
+  upper <- q3 + 1.5 * iqr
+  x[x < lower] <- lower
+  x[x > upper] <- upper
+  return(x)
+}
+
+life_expectancy_data[numeric_vars] <- lapply(life_expectancy_data[numeric_vars], cap_outliers)
+
+```
+
+
+Let's see if we still have outliers. 
+
+```{r}
+boxplot(life_expectancy_data[, numeric_vars], main = "Boxplots for Numeric Variables", las = 2)
+```
+Excellent. 
+
+## Value Extraction and Plot
+
+### Filter for 2015 and get top 10 countries by population
+We’ll find which 10 countries had the highest population in 2015.
+
+```{r}
+head(country_population)
+```
+
+Let’s get the top 10 countries by 2015 population:
+
+```{r}
+head(population_2016 <- country_population %>% select(`Country.Name`, `X2016`))
+```
+Let's see if we have any missing values. 
+```{r}
+colSums(is.na(population_2016))
+```
+Let's remove them. 
+
+```{r}
+population_2016 <- na.omit(population_2016)
+colSums(is.na(population_2016))
+```
+Get top 10 countries by 2016 population
+
+```{r}
+top10_2016 <- population_2016 %>%
+  arrange(desc(`X2016`)) %>%
+  slice(1:10)
+top10_2016
+```
+Wait, we getting entries that are not countries. Let's fix that. 
+
+```{r}
+# Define a vector of known non-country entries
+non_country_entries <- c("World", "IDA & IBRD total", "Low & middle income", "Middle income",
+                         "IBRD only", "Early-demographic dividend", "Lower middle income",
+                         "Upper middle income", "East Asia & Pacific", "Late-demographic dividend")
+
+# Filter out non-country entries
+countries_only <- population_2016 %>%
+  filter(!`Country.Name` %in% non_country_entries)
+
+# Select top 10 countries by population in 2016
+top10_2016 <- countries_only %>%
+  arrange(desc(`X2016`)) %>%
+  slice(1:10)
+
+top10_2016
+```
+
+Still needs more fixing. We'll use the country code and only select the observations with valid country codes. 
+
+```{r}
+population_2016 <- country_population %>% select(`Country.Name`, `Country.Code`, `X2016`)
+head(population_2016)
+```
+
+```{r}
+valid_iso_codes <- c(
+  "AFG", "ALB", "DZA", "AND", "AGO", "ARG", "ARM", "AUS", "AUT", "AZE",
+  "BDI", "BEL", "BEN", "BFA", "BGD", "BGR", "BHR", "BIH", "BLR", "BLZ", 
+  "BOL", "BRA", "BRN", "BTN", "BWA", "CAF", "CAN", "CHE", "CHL", "CHN",
+  "CIV", "CMR", "COD", "COG", "COL", "COM", "CPV", "CRI", "CUB", "CYP",
+  "CZE", "DEU", "DJI", "DNK", "DOM", "DZA", "ECU", "EGY", "ERI", "ESP",
+  "EST", "ETH", "FIN", "FJI", "FRA", "GAB", "GBR", "GEO", "GHA", "GIN",
+  "GMB", "GNB", "GNQ", "GRC", "GTM", "GUY", "HND", "HRV", "HTI", "HUN",
+  "IDN", "IND", "IRL", "IRN", "IRQ", "ISL", "ISR", "ITA", "JAM", "JOR",
+  "JPN", "KAZ", "KEN", "KGZ", "KHM", "KIR", "KOR", "KWT", "LAO", "LBN",
+  "LBR", "LBY", "LKA", "LSO", "LTU", "LUX", "LVA", "MAR", "MDA", "MDG",
+  "MDV", "MEX", "MKD", "MLI", "MLT", "MMR", "MNE", "MNG", "MOZ", "MRT",
+  "MUS", "MWI", "MYS", "NAM", "NER", "NGA", "NIC", "NLD", "NOR", "NPL",
+  "NZL", "OMN", "PAK", "PAN", "PER", "PHL", "PNG", "POL", "PRT", "PRY",
+  "QAT", "ROU", "RUS", "RWA", "SAU", "SDN", "SEN", "SGP", "SLB", "SLE",
+  "SLV", "SOM", "SRB", "SSD", "SUR", "SVK", "SVN", "SWE", "SWZ", "SYR",
+  "TCD", "TGO", "THA", "TJK", "TKM", "TLS", "TTO", "TUN", "TUR", "TZA",
+  "UGA", "UKR", "URY", "USA", "UZB", "VEN", "VNM", "VUT", "YEM", "ZAF",
+  "ZMB", "ZWE"
+)
+
+# Filter only valid countries using Country.Code
+countries_only <- population_2016 %>%
+  filter(Country.Code %in% valid_iso_codes)
+
+# Get top 10 by population in 2016
+top10_2016 <- countries_only %>%
+  arrange(desc(`X2016`)) %>%
+  slice(1:10) %>% select(Country.Name, `X2016`)
+
+top10_2016 
+
+```
+Beautiful, isn't it. Let's move on. 
+
+### Visualize with ggplot2
+We'll use a bar chart, which is appropriate for comparing numerical values across categories (countries, in our case).
+
+Plot 2016 population of those top 10 countries
+
+```{r}
+
+ggplot(top10_2016, aes(x = reorder(`Country.Name`, `X2016`), y = `X2016`)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +  # Flips axes for better readability
+  labs(title = "Top 10 Most Populous Countries in 2015 and Their 2016 Population",
+       x = "Country",
+       y = "Population (2016)") +
+  theme_minimal()
+```
+
+```{r}
+
+library(tidyr)
+library(readr)
+library(stringr)
+top_10_countries <- top10_2016$Country.Name
+
+fertility_top <- fertility_rate %>%
+  filter(`Country.Name` %in% top_10_countries)
+
+# STEP 3: Reshape to long format
+fertility_long <- fertility_top %>%
+  pivot_longer(
+    cols = `X1960`:`X2016`,
+    names_to = "Year",
+    values_to = "Fertility_Rate"
+  ) %>%
+  mutate(
+    Year = as.numeric(str_remove(Year, "^X"))
+  )
+
+# STEP 4: Plot the trend using ggplot2
+ggplot(fertility_long, aes(x = Year, y = Fertility_Rate, color = `Country.Name`)) +
+  geom_line(size = 1.2) +
+  labs(
+    title = "Fertility Rate Trends (1960–2016)",
+    x = "Year",
+    y = "Fertility Rate (births per woman)",
+    color = "Country"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+life_expectancy_top <- life_expectancy %>%
+  filter(`Country.Name` %in% top_10_countries)
+
+# STEP 3: Reshape to long format (wide ➝ long)
+life_expectancy_long <- life_expectancy_top %>%
+  pivot_longer(
+    cols = `X1960`:`X2016`,
+    names_to = "Year",
+    values_to = "Life_Expectancy"
+  ) %>%
+  mutate(
+    Year = as.numeric(str_remove(Year, "^X")),
+    Life_Expectancy = as.numeric(Life_Expectancy)
+  )
+
+# STEP 4: Plot the life expectancy trend
+ggplot(life_expectancy_long, aes(x = Year, y = Life_Expectancy, color = `Country.Name`)) +
+  geom_line(size = 1.2) +
+  labs(
+    title = "Life Expectancy Trends (1960–2016)",
+    x = "Year",
+    y = "Life Expectancy (Years)",
+    color = "Country"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+
+# Selecting only the columns needed for correlation
+cols_to_use <- c("Life.expectancy", "Adult.Mortality", "infant.deaths", "Alcohol",
+                 "percentage.expenditure", "Hepatitis.B", "Measles", "BMI",
+                 "under.five.deaths", "Polio", "Total.expenditure", "Diphtheria",
+                 "HIV.AIDS", "GDP", "Population", "thinness..1.19.years",
+                 "thinness.5.9.years", "Income.composition.of.resources", "Schooling")
+
+# Subset and remove rows with missing values
+data_numeric <- life_expectancy_data[, cols_to_use]
+data_numeric <- na.omit(data_numeric)  # Removes rows with any NA values
+```
+
+```{r}
+# Calculate correlation matrix using Pearson method (default)
+cor_matrix <- cor(data_numeric)
+
+# View the first few rows of correlation matrix
+head(cor_matrix)
+```
+
+```{r}
+library(ggcorrplot)
+
+ggcorrplot(cor_matrix, 
+           lab = TRUE, 
+           lab_size = 2.5, 
+           method = "square", 
+           colors = c("red", "white", "blue"), 
+           title = "Correlation Matrix", 
+           hc.order = TRUE, 
+           type = "lower")
+```
+```{r}
+
+```
+
+```{r}
+cor(data_numeric$Life.expectancy, data_numeric$Schooling)
+```
+This indicates a strong positive correlation between life expectancy and schooling.
+
+Interpretation:
+A value of 0.73 means that as schooling increases, life expectancy tends to increase as well.
+
+Educated individuals are likely more aware of health risks, make better lifestyle choices, and have access to better jobs and healthcare.
+
+This relationship makes logical sense and suggests that improving education might indirectly improve public health and longevity.
+
+
+
+```{r}
+# Check column names of both datasets
+names(life_expectancy_data)            # Life expectancy dataset
+names(fertility_rate)  # Fertility dataset
+
+# Rename columns if needed for consistency (assume they are "Country", "Year", "FertilityRate")
+colnames(fertility_rate)[colnames(fertility_rate) == "FertilityRate"] <- "fertility_rate"
+```
+
+
+```{r}
+fertility_long <- fertility_rate %>%
+  pivot_longer(
+    cols = starts_with("X"),  # All year columns like X1960, X1961...
+    names_to = "Year",
+    values_to = "fertility_rate"
+  )
+
+
+fertility_long
+
+# Check structure
+```
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(caret)      # For RMSE
+library(Metrics)    # For RMSE (optional)
+library(psych)      # For describe()
+library(ggplot2)
+
+# Fit the linear regression model
+model <- lm(Life.expectancy ~ ., data = life_expectancy_data)
+
+# View model summary
+summary(model)
+
+```
+
+```{r}
+# Install if not installed already
+library(Metrics)
+# Predict life expectancy using the model
+predictions <- predict(model, newdata = life_expectancy_data)
+
+# Actual values
+actual <- life_expectancy_data$Life.expectancy
+
+# Calculate RMSE
+rmse_value <- rmse(predictions, actual)
+
+# Print RMSE and R-squared
+cat("R-squared:", summary(model)$r.squared, "\n")
+cat("RMSE:", rmse_value, "\n")
+```
+```{r}
+# Define EAC countries
+eac_countries <- c("Burundi", "Kenya", "Rwanda", "South Sudan", "Tanzania", "Uganda")
+
+# Define SADC countries
+sadc_countries <- c("Angola", "Botswana", "Comoros", "Congo, Dem. Rep.",
+                    "Eswatini", "Lesotho", "Madagascar", "Malawi", "Mauritius",
+                    "Mozambique", "Namibia", "Seychelles", "South Africa",
+                    "Tanzania", "Zambia", "Zimbabwe")
+```
+
+```{r}
+# Extract EAC and SADC subsets
+eac_data <- life_expectancy_data %>%
+  filter(Country %in% eac_countries & !is.na(Life.expectancy)) %>%
+  mutate(Region = "EAC")
+
+sadc_data <- life_expectancy_data %>%
+  filter(Country %in% sadc_countries & !is.na(Life.expectancy)) %>%
+  mutate(Region = "SADC")
+```
+
+```{r}
+# Combine the two datasets
+eac_sadc_data <- bind_rows(eac_data, sadc_data)
+
+# Group by region and calculate average life expectancy
+region_life_exp <- eac_sadc_data %>%
+  group_by(Region) %>%
+  summarise(Average_Life_Expectancy = mean(Life.expectancy))
+
+# View results
+print(region_life_exp)
+```
+
+```{r}
+# Bar plot for comparison
+ggplot(region_life_exp, aes(x = Region, y = Average_Life_Expectancy, fill = Region)) +
+  geom_col() +
+  labs(title = "Average Life Expectancy in EAC vs SADC (2013)",
+       x = "Region",
+       y = "Average Life Expectancy (Years)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
